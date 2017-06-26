@@ -1,0 +1,63 @@
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: devops
+  namespace: carrot
+  labels:
+    name: devops
+spec:
+  replicas: 1
+  selector:
+    name: devops
+  template:
+    metadata:
+      labels:
+        name: devops
+    spec:
+      containers:
+      - name: devops
+        image: 192.168.1.113/carrot/devops:v1
+        ports:
+        - containerPort: 8090
+          protocol: TCP
+        # 从secret对象中引入数据到环境变量中
+        env:
+        - name: SECRET_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tenx-db-name
+        - name: SECRET_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tenx-db-username
+        - name: SECRET_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tenx-db-password
+        - name: SECRET_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tenx-db-host
+        - name: SECRET_DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tenx-db-port
+        resources:
+          limits:
+            cpu: 60m
+            memory: 256Mi
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: tenxcloud-time-zone
+          mountPath: "/etc/localtime"
+          readOnly: true
+      # nodeSelector: 
+      volumes:
+      - name: tenxcloud-time-zone
+        hostPath:
+          path: "/etc/localtime"

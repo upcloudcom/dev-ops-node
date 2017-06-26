@@ -1,0 +1,25 @@
+{
+  "id": "mysql2",
+  "kind": "Pod",
+  "apiVersion": "v1beta1",
+  "desiredState": {
+    "manifest": {
+      "id": "mysql2",
+      "version": "v1beta1",
+      "containers": [{
+        "name": "mysql2",
+        "image": "mysql",
+        "ports": [{
+          "containerPort": 3306
+        }],
+        "env": [{
+          "name": "MYSQL_ROOT_PASSWORD",
+          "value": "tenxcloud"
+        }]
+      }]
+    }
+  },
+  "labels": {
+    "name": "mysql2"
+  }
+}

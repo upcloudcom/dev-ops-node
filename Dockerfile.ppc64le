@@ -1,0 +1,24 @@
+# Licensed Materials - Property of tenxcloud.com
+# (C) Copyright 2016 TenxCloud. All Rights Reserved.
+# v0.1 - 2016-05-07
+# @author Zhao Shuailong 
+
+# Docker file for docker-registry index 
+# arch:ppc64le
+
+FROM index.tenxcloud.com/shuailong/node-ppc64le:4.4.4-trusty
+MAINTAINER shuailong<shuailong@tenxcloud.com>
+
+# Expose the container port
+EXPOSE 80
+
+# Add files to the image
+ADD . /usr/src/app/
+
+WORKDIR /usr/src/app
+
+# Install the dependencies modules
+RUN npm install cnpm -g --registry=https://registry.npm.taobao.org
+RUN cnpm install
+
+CMD ["node", "app.js"]

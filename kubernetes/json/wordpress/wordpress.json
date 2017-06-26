@@ -1,0 +1,38 @@
+{
+  "id": "wordpress",
+  "kind": "Pod",
+  "apiVersion": "v1beta1",
+  "desiredState": {
+    "manifest": {
+      "id": "wordpress",
+      "version": "v1beta1",
+      "containers": [{
+        "name": "wordpress",
+        "image": "wordpress",
+        "ports": [{
+          "containerPort": 80
+        }],
+        "env": [
+          {
+            "name": "WORDPRESS_DB_HOST",
+            "value": "10.80.197.181:3306"
+          },
+          {
+            "name": "WORDPRESS_DB_USER",
+            "value": "root"
+          },
+          {
+            "name": "WORDPRESS_DB_PASSWORD",
+            "value": "tenxcloud"
+          }
+        ]
+      }]
+    }
+  },
+  "labels": {
+    "name": "wordpress"
+  },
+  "restartPolicy": {
+    "Never": {}
+  }
+}

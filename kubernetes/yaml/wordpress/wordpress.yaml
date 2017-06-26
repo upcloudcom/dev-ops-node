@@ -1,0 +1,20 @@
+apiVersion: v1beta1
+id: wordpress
+desiredState:
+  manifest:
+    version: v1beta1
+    id: wordpress
+    containers:
+      - name: wordpress
+        image: tutum/wordpress
+        links:
+          - db: mysql
+        ports:
+          - containerPort: 80
+        env:
+          - name: WORDPRESS_DB_PASSWORD
+            # change this - must match mysql.yaml password
+            value: tenxcloud
+labels:
+  name: wpfrontend
+kind: Pod

@@ -1,0 +1,26 @@
+# Ubuntu with ssh enabled
+# But for now, we have to specify the host port explicitly instead of a random one due to the reason below:
+# 1. Seems kubernetes need the hostPort to map to the container port, or the default hostPort will be the same as containerPort.
+# 2. If the container is down due to some reason, we should keep the public hostPort, so the user can use the same ssh port
+apiVersion: v1beta1
+id: ubuntu
+desiredState:
+  manifest:
+    version: v1beta1
+    id: ubuntu
+    containers:
+      - name: ubuntu
+        image: tutum/ubuntu:trusty
+        ports:
+          - containerPort: 22
+            # Need to change this value, @TO_BE_REPLACED@
+            hostPort: 34567
+        env:
+          # Password for root ssh login
+          - name: ROOT_PASS
+            # Need to change this value, @TO_BE_REPLACED@
+            value: tenxcloud
+labels:
+  name: ubuntu
+kind: Pod
+restartPolicy: never

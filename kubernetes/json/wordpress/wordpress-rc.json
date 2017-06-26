@@ -1,0 +1,36 @@
+{
+  "id":"wordpress-replication-controller",
+  "apiVersion":"v1beta1",
+  "kind":"ReplicationController",
+  "desiredState":{
+    "replicas":1,
+    "replicaSelector":{
+      "name":"wordpress"
+    },
+    "podTemplate":{
+      "desiredState":{
+        "manifest":{
+          "id":"wordpress-replication-controller",
+          "version":"v1beta1",
+          "containers":[{
+            "name":"wordpress",
+            "image":"wordpress",
+            "ports":[{
+              "containerPort":80
+            }],
+            "env":[{
+              "name":"WORDPRESS_DB_PASSWORD",
+              "value":"tenxcloud"
+            }]
+          }]
+        }
+      },
+      "labels":{
+        "name":"wordpress"
+      }
+    }
+  },
+  "labels":{
+    "name":"wordpress"
+  }
+}

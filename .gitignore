@@ -1,0 +1,7 @@
+# Filter out these files/folders
+node_modules/
+logs/
+.DS_Store
+nohup.out
+dist/
+backend.js

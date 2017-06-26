@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Configurable items
+CI_SVN_PROJECTS=('projectA' 'cmdb-compile-svn')
+CI_TCE_PROJECTS=('projectA' 'cmdb-compile-svn')
+DEVOPS_URL="http://192.168.1.157:8090/api/v1"
+AUTH_USER_HEADER="username: zhongyc"
+AUTH_TOKEN="authorization: token hyrfmbtgfkviskghzngpxraninvllcckfhruwbexraramqok"
+CURL_BODY='{"tag":"v2","clearCache":0}'
+
+REPOS="$1"
+REV="$2"
+TXN_NAME="$3"
+PROJECT=$(svnlook changed -r $REV $REPOS | awk '{print $2}' | awk -F/ '{print $1}' | head -n 1)
+CONTENT_TYPE="Content-Type: application/json"
+
+if [ ! -z "$PROJECT" ]; then
+	i=0
+	for project_name in ${CI_SVN_PROJECTS[@]}; do
+		echo "${CI_SVN_PROJECTS[$i]}"
+		echo "$i ..."
+		echo "$project_name"
+		if [ "$PROJECT" == "$project_name" ]; then
+			curl -H "$AUTH_USER_HEADER" -H "$AUTH_TOKEN" -H "CONTENT_TYPE" -XPOST -d CURL_BODY $DEVOPS_URL/ci/builds/${CI_TCE_PROJECTS[$i]}/start
+		fi
+		let ++i
+	done
+fi
+
