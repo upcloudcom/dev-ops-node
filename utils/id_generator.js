@@ -38,6 +38,8 @@ const AUDIT_ID_PREFIX = "AUDID-"
 // ID prefix for Deployment log
 const CD_DEPLOYMENT_LOG_ID_PREFIX = "CDLID-"
 
+const CI_SCRIPT_PREFIX = "SCRIPT-"
+
 // Return new id for managed project
 exports.newManagedProjectID = function() {
   return _generateID(MANAGED_PROJECT_ID_PREFIX)
@@ -77,6 +79,10 @@ exports.newAuditID = function() {
 // Return new id for deployment log
 exports.newCDLogID = function() {
   return _generateID(CD_DEPLOYMENT_LOG_ID_PREFIX)
+}
+
+exports.newScriptID = function() {
+  return _generateID(CI_SCRIPT_PREFIX)
 }
 
 function _generateID(prefix) {

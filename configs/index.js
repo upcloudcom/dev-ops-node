@@ -13,12 +13,21 @@
 const env = process.env
 
 const repo_info = {
- scm_image: env.CICD_REPO_CLONE_IMAGE || 'tenx_containers/clone-repo:v2.0',
+ scm_image: env.CICD_REPO_CLONE_IMAGE || 'tenx_containers/clone-repo:v2.2',
  clone_location: '/app'
 }
 
 const cd_config = {
   cooldown_seconds: 30
+}
+
+const managedClusters = env.MANAGED_CLUSTERS || 'all'
+
+function getManagedClusters() {
+  if (managedClusters === 'all') {
+    return ''
+  }
+  return managedClusters.split(',')
 }
 
 const config = {
@@ -44,7 +53,8 @@ const config = {
   },
   flow_detail_url: env.USERPORTAL_URL + '/ci_cd/tenx_flow/tenx_flow_build' || 'https://portal.tenxcloud.com/ci_cd/tenx_flow/tenx_flow_build',
   cd_config,
-  tailLines: 200
+  tailLines: 200,
+  managed_clusters: getManagedClusters()
 }
 
 module.exports = config

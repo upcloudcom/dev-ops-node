@@ -24,6 +24,7 @@ const logger = require('../utils/logger').getLogger('service/stage')
 const serviceUtils = require('./utils');
 const indexConfig = require('../configs')
 const ciFlowService = require('./ci_flow')
+const ciScripts = require('../models').CIScripts
 
 // stage类型：1-单元测试，2-代码编译，3-构建镜像，4-集成测试，5-自定义
 const BUILD_IMAGE_STAGE_TYPE = 3
@@ -261,6 +262,10 @@ exports.updateStageOfFlow = function* (user, flowId, stageId, stage) {
   delete(stage.spec.container.image)
   stageRec = _updateField(oldStage, stageRec, 'container_info',
     Object.keys(stage.spec.container).length > 0 ? JSON.stringify(stage.spec.container) : null)
+  const oldContainer = JSON.parse(oldStage.container_info)
+  if (!stage.spec.container.hasOwnProperty('scripts_id') && oldContainer.hasOwnProperty('scripts_id')) {
+    yield ciScripts.deleteScriptByID(oldContainer.scripts_id)
+  }
   //更新build_info字段
   if (stage.spec.build) {
     stageRec = stageRec ? stageRec : {}
@@ -294,6 +299,11 @@ exports.deleteStageOfFlow = function* (flowId, stageId, auditInfo) {
   let stages = yield Stage.findExpectedLast(flowId, stageId)
   if (0 === stages.length) {
     return serviceUtils.responseForbidden('Only the last stage of the flow can be removed')
+  }
+  const containerInfo = JSON.parse(stages[0].container_info)
+  if (containerInfo.hasOwnProperty('scripts_id')) {
+    const id = containerInfo.scripts_id
+    ciScripts.deleteScriptByID(id)
   }
   auditInfo.resourceName = stages[0].stage_name
   yield Stage.deleteById(stageId)

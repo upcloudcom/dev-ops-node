@@ -112,7 +112,10 @@ class ImageBuilder {
         "readOnly": true
       })
     }
-
+    // Bind to specified node selector
+    if (process.env.BIND_BUILD_NODE) {
+      jobTemplate.spec.template.spec.nodeSelector = {'system/build-node': 'true'}
+    }
     // TODO: maybe update later
     if (buildImage.split('/').length === 2) {
       buildImage = `${registryConfig.host}/${buildImage}`
@@ -124,15 +127,17 @@ class ImageBuilder {
       //设置nodeName使得构建pod运行在同一node上
       jobTemplate.spec.template.spec.nodeName = buildInfo.nodeName
     }
-    jobTemplate.spec.template.spec.containers = [{
+    const jobContainer = {
       name: BUILDER_CONTAINER_NAME,
-      // image: buildInfo.build_image ? buildInfo.build_image: DEFAULT_IMAGE_BUILDER,
       image: buildImage,
       imagePullPolicy: "Always",
-      // command: ["/home/app/exec-job.sh"],
       args: buildInfo.build_command,
       volumeMounts: volumeMounts
-    }]
+    }
+    if (buildInfo.hasOwnProperty('command') && buildInfo.type !== 3) {
+      jobContainer.command = [buildInfo.command]
+    }
+    jobTemplate.spec.template.spec.containers = [jobContainer]
     // Force to update cmd/args and workingDir
     if (buildInfo.type == 3) {
       // Overwrite cmd & args for building docker image step
@@ -142,6 +147,12 @@ class ImageBuilder {
     } else {
       // Set the working dir to the app path
       jobTemplate.spec.template.spec.containers[0].workingDir = buildInfo.clone_location
+    }
+
+    // If it's using online Dockerfile, no subfolder needed to specifiy
+    if (buildInfo.targetImage.DockerfileOL) {
+      logger.info("Using online Dockerfile, path will be default one")
+      buildInfo.targetImage.DockerfilePath = '/'
     }
 
     //构造dependency container
@@ -242,7 +253,7 @@ class ImageBuilder {
     let i = 1
     let target
     volumeMapping.forEach(function (v) {
-      if (buildInfo.type == 3 && 'target' === v.type) {
+      if ('target' === v.type) {
         target = v
         target.name = 'volume-mapping-' + i
       }
@@ -258,7 +269,6 @@ class ImageBuilder {
       })
       i++
     })
-
     //构造init container
     let initContainer = {
       name: SCM_CONTAINER_NAME,
@@ -291,7 +301,6 @@ class ImageBuilder {
           name: 'ONLINE_DOCKERFILE',
           value: buildInfo.targetImage.DockerfileOL
         },
-        // TODO: get user/password from service account
         {
           name: "SVN_USERNAME",
           value: buildInfo.svn_username
@@ -306,7 +315,6 @@ class ImageBuilder {
       volumeMounts: [
         {
           name: 'repo-path',
-          // mountPath: '/app'
           mountPath: buildInfo.clone_location
         }
       ]
@@ -318,22 +326,13 @@ class ImageBuilder {
         // Let init container konw it's building an image
         name: 'BUILD_DOCKER_IMAGE',
         value: "1"
-      }, /*{
-        name: 'UPLOAD_URL',
-        value: `${registryConfig.protocol}://${registryConfig.host}:${registryConfig.port}/v1`
-      }, {
-        name: 'AUTH',
-        value: 'Basic ' + Buffer(registryConfig.user + ':' + registryConfig.password).toString('base64')
-      }, */{
+      },{
         name: 'IMAGE_NAME',
         value: buildInfo.targetImage.image
       }, {
         name: 'FILES_PATH',
         value: buildInfo.clone_location + buildInfo.targetImage.DockerfilePath
-      }/*{
-        name: 'CONTRIBUTOR',
-        value: buildInfo.imageOwner
-      }*/)
+      })
       if (buildInfo.targetImage.DockerfileName) {
         initContainer.env.push({
           name: 'DOCKERFILE_NAME',
@@ -350,6 +349,11 @@ class ImageBuilder {
         name: target.name,
         mountPath: '/tenx-scm/' + target.containerPath
       })
+    }
+    const entryScriptEnv = buildInfo.env.filter(
+      kv => kv.name === 'SCRIPT_ENTRY_INFO' || kv.name === 'SCRIPT_URL')
+    if (entryScriptEnv.length > 0 && buildInfo.type !== 3) {
+      initContainer.env = initContainer.env.concat(entryScriptEnv)
     }
     jobTemplate.spec.template.metadata.annotations = {
       "pod.alpha.kubernetes.io/init-containers": JSON.stringify([initContainer])
@@ -373,7 +377,8 @@ class ImageBuilder {
     let labels = {
       "flow-id": buildInfo.flowName,
       "stage-id": buildInfo.stageName,
-      "stage-build-id": buildInfo.stageBuildId
+      "stage-build-id": buildInfo.stageBuildId,
+      'system/jobType': 'devflows',
     }
     if (buildInfo.flowBuildId) {
       labels["flow-build-id"] = buildInfo.flowBuildId
@@ -659,8 +664,13 @@ class ImageBuilder {
             resolve(status)
             res.destroy()
           } else if (0 === event.object.spec.parallelism) {
-            //停止job时
-            resolve(status)
+            //有依赖服务，停止job时
+            if (event.object && event.object.metadata && event.object.metadata.labels 
+              && event.object.metadata.labels["tenx-builder-succeed"] == "1") {
+              resolve({'succeeded': 1})
+            } else {
+              resolve(status)
+            }
             res.destroy()
           } else {
             res.resume()
@@ -938,8 +948,7 @@ class ImageBuilder {
 
   checkES () {
     let self = this
-    let healthUrl = `${this.k8sConfig.protocol}://${this.k8sConfig.host}/api/v1/proxy/` +
-      `namespaces/kube-system/services/elasticsearch-logging:9200/_cat/health`
+    let healthUrl = self._getLoggingURL() + `/_cat/health`
     return new Promise(function (resolve, reject) {
       self._sendLoggingRequest(healthUrl, 'GET', null, function(code, data, err) {
         return resolve({
@@ -1007,8 +1016,7 @@ class ImageBuilder {
   getContainerLogsFromES(namespace, podName, containerName, date, res) {
     const method = 'getContainerLogsFromES'
     // Should have 9200 on the new k8s version
-    let esHost = `${this.k8sConfig.protocol}://${this.k8sConfig.host}/api/v1/proxy/` +
-      `namespaces/kube-system/services/elasticsearch-logging:9200`
+    let esHost = this._getLoggingURL()
     let scrollInitUrl = `${esHost}/logstash-${date}/_search?scroll=1m`
     let requestBody = {
       "from" : 0,
@@ -1101,8 +1109,7 @@ class ImageBuilder {
 
   _scrollRestLogs(scrollId, podName, res) {
     const method = '_scrollRestLogs'
-    let esHost = `${this.k8sConfig.protocol}://${this.k8sConfig.host}/api/v1/proxy/` +
-      `namespaces/kube-system/services/elasticsearch-logging:9200`
+    let esHost = this._getLoggingURL()
     let scrollNextUrl = `${esHost}/_search/scroll`
     let requestBody = {
       "scroll": '1m',
@@ -1113,8 +1120,7 @@ class ImageBuilder {
   }
 
   _clearScroll(scrollId) {
-    let esHost = `${this.k8sConfig.protocol}://${this.k8sConfig.host}/api/v1/proxy/` +
-      `namespaces/kube-system/services/elasticsearch-logging:9200`
+    let esHost = this._getLoggingURL()
     let clearScrollUrl = `${esHost}/_search/scroll`
     let requestBody = {
       "scroll_id": [scrollId]
@@ -1136,6 +1142,15 @@ class ImageBuilder {
       }
       resolve(refinedLogs)
     })
+  }
+
+  _getLoggingURL () {
+    let esURL = `${this.k8sConfig.protocol}://${this.k8sConfig.host}/api/v1/proxy/` +
+      `namespaces/kube-system/services/elasticsearch-logging:9200`
+    if (process.env.EXTERNAL_ES_URL) {
+      esURL = process.env.EXTERNAL_ES_URL
+    }
+    return esURL
   }
 
   _sendLoggingRequest(requestUrl, httpMethod, data, callback) {

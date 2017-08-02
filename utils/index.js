@@ -63,3 +63,7 @@ exports.parse = function (str) {
 exports.getWebHookUrl = function() {
   return `${global.CICDCONFIG.external_protocol}://${global.CICDCONFIG.external_host}/api/v2/devops/managed-projects/webhooks`
 }
+
+exports.getScriptUrl = function() {
+  return `${global.CICDCONFIG.external_protocol}://${global.CICDCONFIG.external_host}/api/v2/devops/ci-scripts`
+}

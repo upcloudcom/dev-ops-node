@@ -117,3 +117,27 @@ exports.decRegistryPassword = function (cryptedContent, privateKey) {
     return null
   }
 }
+
+exports.aeadEncrypt = function(content) {
+  const secret = new Buffer(SECRET_KEY)
+  const salt = crypto.randomBytes(64)
+  const key = crypto.pbkdf2Sync(secret, salt, 2145, 32, 'sha512')
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+  const crypted = Buffer.concat([cipher.update(content, 'utf8'), cipher.final()])
+  const tag = cipher.getAuthTag()
+  return Buffer.concat([salt, iv, tag, crypted]).toString('base64')
+}
+
+exports.aeadDecrypt = function(encrypted) {
+  const buffer = new Buffer(encrypted, 'base64')
+  const salt = buffer.slice(0, 64)
+  const iv = buffer.slice(64, 76)
+  const tag = buffer.slice(76, 92)
+  const content = buffer.slice(92)
+  const secret = new Buffer(SECRET_KEY)
+  const key = crypto.pbkdf2Sync(secret, salt, 2145, 32, 'sha512')
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
+  decipher.setAuthTag(tag)
+  return decipher.update(content, 'binary', 'utf8') + decipher.final('utf8')
+}

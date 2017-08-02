@@ -28,6 +28,10 @@ const auditServices = require('./services/audit')
 const app = koa()
 const audit = require('./services/audit')
 
+const cyclicallyDeleteCICDJobs = require('./services/scavenger')
+
+cyclicallyDeleteCICDJobs()
+
 /*
  * Middlewares
  */
@@ -141,7 +145,11 @@ app.use(function *(next) {
           result.resource_id = self.params[result.resourceIdParam]
         }
         if (!result.resource_name && result.resourceNameParam) {
-          result.resource_name = self.params[result.resourceNameParam]
+          if (self.params[result.resourceNameParam]) {
+            result.resource_name = self.params[result.resourceNameParam]
+          } else if (self.query[result.resourceNameParam]) {
+            result.resource_name = self.query[result.resourceNameParam]
+          }
         }
         if (!result.resource_config && self.request.body && Object.keys(self.request.body).length > 0) {
           result.resource_config = JSON.stringify(self.request.body)

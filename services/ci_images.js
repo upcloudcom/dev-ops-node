@@ -42,6 +42,7 @@ exports.createNewBaseImage = function* (user, imageInfo) {
   imageInfo.category_name = _getCategoryName(imageInfo.category_id)
   // 用户添加的基础镜像容许删除
   imageInfo.is_allow_deletion = 0
+  imageInfo = _refineImageInfo(imageInfo)
   let results = yield CIImages.createNewBaseImage(imageInfo)
   return {
     status: 200,
@@ -54,6 +55,7 @@ exports.updateBaseImage = function* (id, user, imageInfo) {
   imageInfo.is_system = isAdminRole(user) ? 1 : 0
   imageInfo.category_name = _getCategoryName(imageInfo.category_id)
   let results
+  imageInfo = _refineImageInfo(imageInfo)
   if (isAdminRole(user)) {
     results = yield CIImages.updateBaseImageById(id, imageInfo)
   } else {
@@ -90,4 +92,14 @@ function _getCategoryName(category_id) {
     case 4:
       return "集成测试"
   }
+}
+
+function _refineImageInfo(imageInfo) {
+  if (imageInfo.image_name) {
+    imageInfo.image_name = imageInfo.image_name.replace(/^\s+|\s+$/g, "")
+  }
+  if (imageInfo.image_url) {
+    imageInfo.image_url = imageInfo.image_url.replace(/^\s+|\s+$/g, "")
+  }
+  return imageInfo
 }

@@ -57,6 +57,7 @@ module.exports = {
   ResourceQuota: load('resource_quota'),
   CIFlow: load('ci_flow'),
   CIDockerfiles: load('ci_dockerfiles'),
+  CIScripts: load('ci_scripts'),
   Audit: load('audit'),
   DeploymentLogs: load('cd_deployment_logs'),
   CIImages: load('ci_images'),

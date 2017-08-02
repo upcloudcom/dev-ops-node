@@ -94,7 +94,9 @@ const AuditResource = {
 	AuditResourceCIDockerfiles: ++index,
 	AuditResourceCINotifications: ++index,
 	AuditResourceCDNotifications: ++index,
-	AuditResourceCIImages: ++index
+
+  // For devops service, start from 1000 now
+  AuditResourceCIImages: 1000
 }
 exports.AuditResource = AuditResource
 
@@ -114,6 +116,7 @@ const ciDockerfiles = require('../controllers/ci_dockerfiles')
 const ciImages = require('../controllers/ci_images')
 const resourceQuota = require('../controllers/resource_quota')
 const auth = require('../utils/auth')
+const ciScripts = require('../controllers/ci_scripts')
 
 exports.prefix = '/api/v2/devops'
 
@@ -184,6 +187,25 @@ exports.routes = {
     method: "get",
     middlewares: [repo.getAuthRedirectUrl]
   }],
+
+  "/ci-scripts": [{
+    method: "post",
+    middlewares: [ciScripts.addScript]
+  }],
+  "/ci-scripts/:id": [
+    {
+      method: "get",
+      middlewares: [ciScripts.getScriptByID]
+    },
+    {
+      method: "delete",
+      middlewares: [ciScripts.deleteScriptByID]
+    },
+    {
+      method: "put",
+      middlewares: [ciScripts.updateScriptByID]
+    }
+  ],
 
   // configurations for Projects
   "/managed-projects": [
@@ -418,7 +440,9 @@ exports.routes = {
       method: "post",
       middlewares: [ciImages.createNewBaseImage],
       auditOperation: AuditOperation.AuditOperationCreate,
-      auditResource: AuditResource.AuditResourceCIImages
+      auditResource: AuditResource.AuditResourceCIImages,
+      resourceIdParam: "id",
+      resourceNameParam: "name"
     }
   ],
   "/ci/images/:id": [
@@ -427,13 +451,15 @@ exports.routes = {
       middlewares: [ciImages.deleteBaseImage],
       auditOperation: AuditOperation.AuditOperationDelete,
       auditResource: AuditResource.AuditResourceCIImages,
-      resourceIdParam: "id"
+      resourceIdParam: "id",
+      resourceNameParam: "name"
     }, {
       method: "put",
       middlewares: [ciImages.updateBaseImage],
       auditOperation: AuditOperation.AuditOperationCreate,
       auditResource: AuditResource.AuditResourceCIImages,
-      resourceIdParam: "id"
+      resourceIdParam: "id",
+      resourceNameParam: "name"
     }
   ]
 }

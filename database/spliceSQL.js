@@ -52,7 +52,7 @@ const SQLCollection = {
          //scount查找flow对应的stage数量
          "(select f.flow_id, count(s.stage_id) as stages_count, project_id, repo_type, s.build_info, default_branch, p.address, f.is_build_image " +
             "from tenx_ci_flows f left join " +
-                 "tenx_ci_stages s on s.flow_id = f.flow_id inner join tenx_ci_managed_projects p on s.project_id = p.id " +
+                 "tenx_ci_stages s on s.flow_id = f.flow_id left join tenx_ci_managed_projects p on s.project_id = p.id " +
             "where f.namespace= ? group by f.flow_id) scount "+
          "on scount.flow_id = tmp_flow.flow_id  where tmp_flow.is_build_image = ? " +
          "order by tmp_flow.create_time desc",
@@ -88,7 +88,7 @@ const SQLCollection = {
         "where flowBuild.flow_id = ? order by creation_time desc limit ?",
     // Get dockerfiles of a namespace
     SELECT_CI_DOCKERFILES:
-      "SELECT d.flow_id, d.stage_id, s.stage_name, f.name, d.create_time, d.update_time FROM tenx_ci_flows f, tenx_ci_stages s, tenx_ci_dockerfiles d where f.namespace = ? and " +
+      "SELECT d.flow_id, d.stage_id, d.type, s.stage_name, f.name, d.create_time, d.update_time FROM tenx_ci_flows f, tenx_ci_stages s, tenx_ci_dockerfiles d where f.namespace = ? and " +
       "f.flow_id = d.flow_id and s.stage_id = d.stage_id order by d.update_time desc",
     // Deployment log of CD
     SELECT_FLOW_DEPLOYMENT_LOGS:

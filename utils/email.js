@@ -19,6 +19,9 @@ const tenxConfigsModel = require('../models').Configs
 
 exports.sendEmail = function (mailOptions) {
   const method = 'sendEmail'
+  if (mailOptions.host.auth.pass === '') {
+    mailOptions.host.auth = null
+  }
   const smtpTransport = nodemailer.createTransport("SMTP", mailOptions.host)
   return new Promise(function (resovle, reject) {
     // send email

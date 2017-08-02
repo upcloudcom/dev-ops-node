@@ -37,6 +37,7 @@ const CIFlow = require('../models').CIFlow
 const UserPreference = require('../models').UserPreference
 const User = require('../models').User
 const tailLines = require('../configs/index').tailLines
+const cryptor = require('../utils/security')
 
 const DEFAULT_PAGE_NUMBER = 1
 const DEFAULT_PAGE_SIZE = 10
@@ -223,7 +224,7 @@ exports.getStageBuildLogsFromES = function* (user, flowId, stageId, stageBuildId
     if (!podName) {
       logger.error(method, "Failed to get a pod of job", build.job_name)
       res.writeHead(200, {'Connection': 'close'})
-      res.write('<font color="red">[Tenx Flow API Error] Log of this build can never be fetched because the build container can not be found!</font>')
+      res.write('<font color="#ffc20e">[Tenx Flow API] 构建任务不存在或已经被删除</font>')
       return
     }
     build.pod_name = podName
@@ -543,6 +544,35 @@ function* _decPassword(password, user, stage, stageBuild, flowOwner) {
   }
 }
 
+function useScript(containerInfo) {
+  return containerInfo.hasOwnProperty('scripts_id')
+}
+
+function getUser(userName) {
+  return User.findByName(userName)
+}
+
+function* makeScriptEntryEnvForInitContainer(user, containerInfo) {
+  const scriptID = containerInfo.scripts_id
+  const userName = user.name
+  let userToken = null
+  if (user.token) {
+    userToken = user.token
+  } else {
+    const u = yield getUser(userName)
+    userToken = u.api_token
+  }
+  containerInfo.args = []
+  containerInfo.command = `/app/${scriptID}`
+  containerInfo.env.push({
+    name: 'SCRIPT_ENTRY_INFO',
+    value: cryptor.aeadEncrypt(`${scriptID}:${userName}:${userToken}`)
+  }, {
+    name: 'SCRIPT_URL',
+    value: utils.getScriptUrl()
+  })
+}
+
 function* _startStageBuild(user, stage, stageBuild, flowOwner) {
   //TODO: support build image
   //TODO: support shared volume
@@ -717,6 +747,12 @@ function* _startStageBuild(user, stage, stageBuild, flowOwner) {
   let buildWithDependency = false
   if (stage.container_info) {
     let containerInfo = JSON.parse(stage.container_info)
+    if (useScript(containerInfo)) {
+      yield makeScriptEntryEnvForInitContainer(user, containerInfo)
+    }
+    if (containerInfo.hasOwnProperty('command')) {
+      buildInfo.command = containerInfo.command
+    }
     buildInfo.build_command = containerInfo.args
     buildInfo.env = containerInfo.env
     if (containerInfo.dependencies && containerInfo.dependencies.length > 0) {

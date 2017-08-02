@@ -185,7 +185,7 @@ function _doStart() {
       }
       if ('DELETED' === event.type) {
         //收到deleted事件，job可能被第三方删除
-        logger.info(method, 'A job is deleted:', event.object)
+        logger.info(method, 'A job is deleted:', event.object ? event.object.metadata.name : event)
         if (event.object.metadata.labels['stage-build-id']) {
           if (event.object.status && 1 >= event.object.status.succeeded) {
             //构建成功
@@ -227,6 +227,14 @@ function _doStart() {
     logger.error(method, `Job watcher started error:`, err)
     logger.info(method, 'Start again later')
     setTimeout(function() {
+      if (err && err.code === 'ECONNREFUSED') {
+        configsSercvice.getK8SConfigs().then(result => {
+          global.K8SCONFIGS = result
+          k8sConfig = result
+          _doStart()
+        })
+        return
+      }
       _doStart()
     }, 1000)
   })

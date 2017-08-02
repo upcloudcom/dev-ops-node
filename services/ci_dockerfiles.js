@@ -61,7 +61,8 @@ exports.addDockerfile = function* (user, flow_id, stage_id, body) {
     content: body.content,
     modified_by: user.name,
     create_time: new Date(),
-    update_time: new Date()
+    update_time: new Date(),
+    type: body.type,
   }
   let results = yield CIDockerfiles.addDockerfile(dockerfile)
   return {
@@ -116,7 +117,8 @@ exports.addOrUpdateDockerfile = function* (namespace, flowId, stageId, user, bod
       content: body.content,
       modified_by: user,
       create_time: new Date(),
-      update_time: new Date()
+      update_time: new Date(),
+      type: body.type,
     }
     results = yield CIDockerfiles.addDockerfile(dockerfile)
     return {
