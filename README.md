@@ -23,13 +23,3 @@ Service to support CI/CD related features
 npm run build
 ```
 
-## pull image
-```
-docker pull 192.168.1.86:5000/tenxcloud/tenx_ci_cd_service
-```
-
-## run server
-
-```
-docker run -d --restart=always -p 8090:8090 --name tenx-cicd-service -v "$PWD":/opt/nodejs/configs 192.168.1.86:5000/tenxcloud/tenx_ci_cd_service
-```
