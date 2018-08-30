@@ -1,4 +1,4 @@
-# TenxCloud DevOps service 2.0
+# upcloudcom cicd 
 
 ### 全局变量说明
 变量名 | 说明 | 举例
